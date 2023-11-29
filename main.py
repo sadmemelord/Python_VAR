@@ -1,7 +1,10 @@
 from PySide6.QtWidgets import QApplication
-from videoPlayer import VideoPlayer
+from VideoPlayer import VideoPlayer
+from VideoPlayer2 import VideoPlayer2
+
 
 if __name__ == "__main__":
     app = QApplication([])
-    player = VideoPlayer()
+    window = VideoPlayer2()
+    #player = VideoPlayer()
     app.exec_()

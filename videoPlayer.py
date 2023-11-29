@@ -1,5 +1,5 @@
 import sys
-from PySide6.QtCore import Qt, QTimer, Slot, Signal, QTimeLine
+from PySide6.QtCore import Qt, QTimer, Slot, Signal, QTimeLine, QMutex
 from PySide6.QtGui import QImage, QPixmap
 from PySide6.QtWidgets import QApplication, QMainWindow, QLabel, QVBoxLayout, QPushButton, QWidget, QProgressBar, QSlider
 import cv2
@@ -12,14 +12,21 @@ from TimelineWidget import TimelineWidget
 class VideoPlayer(QMainWindow):
     def __init__(self):
         super().__init__()
-
+        # Member variables
         self.buffer_size = 500
         self.circular_buffer = CircularBuffer(self.buffer_size)
-        self.worker_thread = WorkerThread(self.circular_buffer, self)
+        self.worker_thread = WorkerThread(buffer=self.circular_buffer, 
+                                          capture_index=0, 
+                                          parent=self)
+        
+
+        # Mutex for thread sync
+        self.mutex = QMutex()
 
         self.init_ui()
 
     def init_ui(self):
+        self.setWindowTitle("")
         self.central_widget = QWidget(self)
         self.setCentralWidget(self.central_widget)
 
@@ -47,7 +54,7 @@ class VideoPlayer(QMainWindow):
         self.playback_button.clicked.connect(self.start_playback)
         self.resume_button.clicked.connect(self.resume_realtime)
 
-        self.worker_thread.frame_processed.connect(self.update_frame)
+        self.worker_thread.display_frame.connect(self.update_frame)
         self.worker_thread.head_position_updated.connect(self.update_head_slider)
         self.worker_thread.tail_position_updated.connect(self.update_tail_slider)
         self.worker_thread.head_position_updated.connect(self.update_timeline_head)
@@ -62,11 +69,11 @@ class VideoPlayer(QMainWindow):
         self.show()
     
     def update_timeline_head(self, position):
-        tail_position = self.circular_buffer.get_tail_position()
+        tail_position = self.circular_buffer.tail_position()
         self.timeline_widget.set_cursor_positions(position, tail_position)
 
     def update_timeline_tail(self, position):
-        head_position = self.circular_buffer.get_head_position()
+        head_position = self.circular_buffer.head_position()
         self.timeline_widget.set_cursor_positions(head_position, position)
 
         # Additionally, update the tail slider
@@ -74,17 +81,23 @@ class VideoPlayer(QMainWindow):
 
     @Slot(bool)
     def slider_is_pressed(self):
+        self.mutex.lock()
         self.worker_thread.tail_position_updated.disconnect(self.update_tail_slider)
+        self.mutex.unlock()
 
     @Slot(int)
     def slider_is_moved(self, slider_value):
+        self.mutex.lock()
         self.worker_thread.set_buffer_peeking(is_peeking=True, new_peek_position=slider_value)
+        self.mutex.unlock()
 
     @Slot(int)
     def slider_is_released(self):
+        self.mutex.lock()
         self.worker_thread.set_buffer_peeking(is_peeking=False, new_peek_position=None)
         self.circular_buffer.set_tail_position(self.tail_slider.value())
         self.worker_thread.tail_position_updated.connect(self.update_tail_slider)
+        self.mutex.unlock()
     
     @Slot(int)
     def update_tail_slider(self, position):
@@ -96,14 +109,18 @@ class VideoPlayer(QMainWindow):
         self.head_slider.setValue(position)
 
     def start_playback(self):
+        self.mutex.lock()
         position = 0  # Set the playback position to the beginning
         try:
             self.circular_buffer.set_tail_position(position)
         except ValueError as e:
             print(f"Error setting playback position: {e}")
+        self.mutex.unlock()
 
     def resume_realtime(self):
-        self.circular_buffer.set_tail_position(self.circular_buffer.get_head_position())
+        self.mutex.lock()
+        self.circular_buffer.set_tail_position(self.circular_buffer.head_position())
+        self.mutex.unlock()
 
     def update_frame(self, display_frame):
         height, width, channel = display_frame.shape

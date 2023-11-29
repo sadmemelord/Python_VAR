@@ -16,7 +16,6 @@ class CircularBuffer:
     """
     def __init__(self, capacity: int):
         """Initialize the circular buffer with the given capacity."""
-
         if not isinstance(capacity, int) or capacity <= 0:
             raise ValueError("Capacity must be a positive integer.")
         
@@ -44,7 +43,7 @@ class CircularBuffer:
         
     def peek_frame(self, position: int) -> Optional[np.ndarray]:
         """Read a frame from the buffer in a given position without removing it. Returns None if the buffer is empty"""
-        upper_position = self.capacity if self.is_full() else  self.head
+        upper_position = (self.capacity - 1) if self.is_full() else (self.head -1)
         if not self.is_empty():
         
             if 0 <= position <= upper_position:
@@ -57,15 +56,18 @@ class CircularBuffer:
 
     def set_tail_position(self, position: int):
         """Set the tail position."""
-        upper_position = self.capacity if self.is_full() else  self.head
+        upper_position = (self.capacity - 1) if self.is_full() else self.head
 
         if 0 <= position <= upper_position:
             self.tail = position
         else:
             logging.warning("Invalid tail position. Tail position is now set to head position")
-            self.tail = self.head
-            
+            self.set_tail_to_head()
     
+    def set_tail_to_head(self):
+        """Set the tail position to the head position"""
+        self.tail = self.head
+            
     def clear(self):
         """Clear the buffer, removing all elements."""
         self.buffer.clear()
@@ -74,7 +76,6 @@ class CircularBuffer:
     
     def resize(self, new_capacity: int):
         """Resize the buffer to a new capacity."""
-
         if not isinstance(new_capacity, int) or new_capacity <= 0:
             raise ValueError("New capacity must be a positive integer.")
         
@@ -89,13 +90,21 @@ class CircularBuffer:
         """Check if the buffer is full."""
         return len(self.buffer) == self.capacity
 
-    def get_tail_position(self) -> int:
+    def tail_position(self) -> int:
         """Get the current read position within the buffer."""
         return self.tail
 
-    def get_head_position(self) -> int:
+    def head_position(self) -> int:
         """Get the current write position within the buffer."""
         return self.head
+
+    def get_buffer(self) -> deque:
+        """Returns the buffer as a deque object. Returns None if the buffer is empty"""
+        if not self.is_empty():
+            buffer = self.buffer.copy()
+            return buffer
+        else:
+            return None
 
     def __len__(self) -> int:
         """Return the current size of the buffer."""
