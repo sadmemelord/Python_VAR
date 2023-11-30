@@ -9,10 +9,10 @@ logging.basicConfig(level=logging.WARNING)
 class CircularBuffer:
     """ Basic circular buffer implementation in Python. The following code is used to store and retrieve video frames as numpy arrays
         Attributes:
-            capacity (int): The maximum capacity of the buffer.
-            buffer (deque): The deque data structure used for storing frames.
-            head (int): The index representing the current write position.
-            tail (int): The index representing the current read position.
+            -capacity (int): The maximum capacity of the buffer.
+            -buffer (deque): The deque data structure used for storing frames.
+            -head (int): The index representing the current write position.
+            -tail (int): The index representing the current read position.
     """
     def __init__(self, capacity: int):
         """Initialize the circular buffer with the given capacity."""
@@ -25,28 +25,39 @@ class CircularBuffer:
         self.tail = 0
 
     def write_frame(self, frame: np.ndarray):
-        """Write a frame to the buffer at head position. If the buffer is full the oldest frame is replaced"""
+        """Write a frame to the buffer at head position and step forward. If the buffer is full the oldest frame is replaced"""
         if len(self.buffer) < self.capacity:
             self.buffer.append(frame)
         else:
             self.buffer[self.head] = frame
         self.head = (self.head + 1) % self.capacity
+         
+    def read_frame(self, playback:bool = False) -> Optional[np.ndarray]:
+        """Read a frame from the buffer at tail position without removing it and step forward. Returns None if the buffer is empty.
 
-    def read_frame(self) -> Optional[np.ndarray]:
-        """Read a frame from the buffer at tail position without removing it. Returns None if the buffer is empty."""
+            Arguments:
+            -playback(bool): Flag used when it is necessary to read the buffer without writing on it
+        """
         if not self.is_empty():
-            frame = self.buffer[self.tail]
-            self.tail = (self.tail + 1) % self.capacity
+            try:
+                frame = self.buffer[self.tail]
+            except:
+                frame = self.buffer[-1]
+            if playback:
+                upper_limit = self.capacity if self.is_full() else self.head
+                self.tail = (self.tail + 1) % upper_limit
+            else:
+                self.tail = (self.tail + 1) % self.capacity
             return frame
         else:
             return None
-        
+    
     def peek_frame(self, position: int) -> Optional[np.ndarray]:
         """Read a frame from the buffer in a given position without removing it. Returns None if the buffer is empty"""
-        upper_position = (self.capacity - 1) if self.is_full() else (self.head -1)
+        upper_position = self.capacity if self.is_full() else self.head
         if not self.is_empty():
         
-            if 0 <= position <= upper_position:
+            if 0 <= position < upper_position:
                 return self.buffer[position]
             else:
                 logging.warning("Invalid peek position. Frame at head position is returned instead")        
@@ -56,9 +67,9 @@ class CircularBuffer:
 
     def set_tail_position(self, position: int):
         """Set the tail position."""
-        upper_position = (self.capacity - 1) if self.is_full() else self.head
+        upper_position = self.capacity if self.is_full() else self.head
 
-        if 0 <= position <= upper_position:
+        if 0 <= position < upper_position:
             self.tail = position
         else:
             logging.warning("Invalid tail position. Tail position is now set to head position")

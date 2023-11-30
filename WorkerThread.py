@@ -12,9 +12,9 @@ class WorkerThread(QThread):
         '''QThread that processes frame from a VideoCapture by writing and reading a CircularBuffer and emits them on the GUI.
         
             Arguments:
-            buffer (CircularBuffer): The CircularBuffer where frames are saved and retrieved.
-            capture_index (int): VideoCapture index to a specific webcam
-            parent: Parent QObject.
+            -buffer (CircularBuffer): The CircularBuffer where frames are saved and retrieved.
+            -capture_index (int): VideoCapture index to a specific webcam
+            -parent: Parent QObject.
         '''
         super().__init__(parent)
         if not isinstance(buffer, CircularBuffer) or buffer == None:
@@ -40,10 +40,15 @@ class WorkerThread(QThread):
         else:
             try:
                 self.video_capture = cv2.VideoCapture(capture_index)
+                self.width = self.video_capture.set(cv2.CAP_PROP_FRAME_WIDTH, 1920)
+                self.height = self.video_capture.set(cv2.CAP_PROP_FRAME_HEIGHT, 1080)
                 self.width = self.video_capture.get(cv2.CAP_PROP_FRAME_WIDTH)
                 self.height = self.video_capture.get(cv2.CAP_PROP_FRAME_HEIGHT)
                 self.fourcc = cv2.VideoWriter_fourcc(*'DIVX')
                 self.fps = 25
+                print("\n---------")
+                print(f"Capture {self.video_capture} | Width: {self.width} | Height: {self.height} | FPS: {self.fps}")
+                print("---------\n")
             except:
                 raise SystemError("Argument 'capture_index' is not a valid index for cv2.VideoCapture object")
 
@@ -61,15 +66,18 @@ class WorkerThread(QThread):
                 raise Exception("ERROR: Couldn't read from VideoCapture")
             
             self.mutex.lock()
+
             # Writing the current frame at the head of the buffer
-            self.buffer.write_frame(frame)
+            if not self.is_playback:
+                self.buffer.write_frame(frame)
 
             # If the user is dragging the timeline cursor the frame shown corresponds to the position on the timeline
             # If the user isn't dragging the timeline cursor the frae shown is the one at the tail of the buffer
             if self.is_peeking:
                 display_frame = self.buffer.peek_frame(self.peek_position)
             else:
-                display_frame = self.buffer.read_frame()
+                display_frame = self.buffer.read_frame(playback=self.is_playback)
+
 
             # Emitting signals to update the GUI
             self.display_frame.emit(display_frame)
@@ -85,7 +93,7 @@ class WorkerThread(QThread):
         self.mutex.unlock()
 
     def save_video_buffer(self):
-        '''The current CircularBuffer is saved to disk as a video using OpenCV VideoWriter'''
+        '''The current CircularBuffer is saved to disk as a video using OpenCV VideoWriter.'''
         self.mutex.lock()
         auxiliary_buffer = self.buffer.get_buffer()
         self.mutex.unlock()
@@ -98,10 +106,20 @@ class WorkerThread(QThread):
         ''' When the thread is peeking playback frames are shown by indexing the CircularBuffer.
         
             Arguments:
-            is_peeking (bool): Flag that enables or disables the thread peeking through the buffer.
-            new_peek_position (int): Buffer index where the thread will peek at the next frame.
+            -is_peeking (bool): Flag that enables or disables the thread peeking through the buffer.
+            -new_peek_position (int): Buffer index where the thread will peek at the next frame.
         '''
         self.mutex.lock()
         self.is_peeking = is_peeking
         self.peek_position = new_peek_position
+        self.mutex.unlock()
+
+    def set_buffer_playback(self, is_playback:bool):
+
+        self.mutex.lock()
+        self.is_playback = is_playback
+        if is_playback:
+            self.buffer.set_tail_position(position=0)
+        else:
+            self.buffer.set_tail_to_head()
         self.mutex.unlock()

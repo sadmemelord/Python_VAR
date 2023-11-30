@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>1280</width>
-    <height>872</height>
+    <height>725</height>
    </rect>
   </property>
   <property name="minimumSize">
@@ -29,7 +29,29 @@
    <string notr="true">background-color:#202324</string>
   </property>
   <widget class="QWidget" name="centralwidget">
+   <property name="maximumSize">
+    <size>
+     <width>1920</width>
+     <height>1080</height>
+    </size>
+   </property>
    <layout class="QVBoxLayout" name="verticalLayout">
+    <item>
+     <spacer name="verticalSpacer_5">
+      <property name="orientation">
+       <enum>Qt::Vertical</enum>
+      </property>
+      <property name="sizeType">
+       <enum>QSizePolicy::Preferred</enum>
+      </property>
+      <property name="sizeHint" stdset="0">
+       <size>
+        <width>20</width>
+        <height>40</height>
+       </size>
+      </property>
+     </spacer>
+    </item>
     <item>
      <layout class="QVBoxLayout" name="video_layout">
       <item>
@@ -44,22 +66,40 @@
           </property>
           <property name="sizeHint" stdset="0">
            <size>
-            <width>40</width>
-            <height>20</height>
+            <width>150</width>
+            <height>0</height>
            </size>
           </property>
          </spacer>
         </item>
         <item>
          <widget class="QLabel" name="video_label_1">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
           <property name="minimumSize">
            <size>
-            <width>320</width>
-            <height>240</height>
+            <width>400</width>
+            <height>225</height>
            </size>
+          </property>
+          <property name="maximumSize">
+           <size>
+            <width>800</width>
+            <height>450</height>
+           </size>
+          </property>
+          <property name="styleSheet">
+           <string notr="true">background-color:#121414</string>
           </property>
           <property name="text">
            <string/>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignCenter</set>
           </property>
          </widget>
         </item>
@@ -69,7 +109,7 @@
            <enum>Qt::Horizontal</enum>
           </property>
           <property name="sizeType">
-           <enum>QSizePolicy::Maximum</enum>
+           <enum>QSizePolicy::Minimum</enum>
           </property>
           <property name="sizeHint" stdset="0">
            <size>
@@ -81,6 +121,27 @@
         </item>
         <item>
          <widget class="QLabel" name="video_label_2">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="minimumSize">
+           <size>
+            <width>400</width>
+            <height>225</height>
+           </size>
+          </property>
+          <property name="maximumSize">
+           <size>
+            <width>800</width>
+            <height>450</height>
+           </size>
+          </property>
+          <property name="styleSheet">
+           <string notr="true">background-color:#121414</string>
+          </property>
           <property name="text">
            <string/>
           </property>
@@ -96,7 +157,7 @@
           </property>
           <property name="sizeHint" stdset="0">
            <size>
-            <width>40</width>
+            <width>150</width>
             <height>20</height>
            </size>
           </property>
@@ -110,7 +171,7 @@
          <enum>Qt::Vertical</enum>
         </property>
         <property name="sizeType">
-         <enum>QSizePolicy::Fixed</enum>
+         <enum>QSizePolicy::Preferred</enum>
         </property>
         <property name="sizeHint" stdset="0">
          <size>
@@ -132,7 +193,7 @@
           </property>
           <property name="sizeHint" stdset="0">
            <size>
-            <width>40</width>
+            <width>150</width>
             <height>20</height>
            </size>
           </property>
@@ -140,11 +201,26 @@
         </item>
         <item>
          <widget class="QLabel" name="video_label_3">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
           <property name="minimumSize">
            <size>
-            <width>320</width>
-            <height>240</height>
+            <width>400</width>
+            <height>225</height>
            </size>
+          </property>
+          <property name="maximumSize">
+           <size>
+            <width>800</width>
+            <height>450</height>
+           </size>
+          </property>
+          <property name="styleSheet">
+           <string notr="true">background-color:#121414</string>
           </property>
           <property name="text">
            <string/>
@@ -157,7 +233,7 @@
            <enum>Qt::Horizontal</enum>
           </property>
           <property name="sizeType">
-           <enum>QSizePolicy::Maximum</enum>
+           <enum>QSizePolicy::Minimum</enum>
           </property>
           <property name="sizeHint" stdset="0">
            <size>
@@ -169,6 +245,27 @@
         </item>
         <item>
          <widget class="QLabel" name="video_label_4">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="minimumSize">
+           <size>
+            <width>400</width>
+            <height>225</height>
+           </size>
+          </property>
+          <property name="maximumSize">
+           <size>
+            <width>800</width>
+            <height>450</height>
+           </size>
+          </property>
+          <property name="styleSheet">
+           <string notr="true">background-color:#121414</string>
+          </property>
           <property name="text">
            <string/>
           </property>
@@ -184,7 +281,7 @@
           </property>
           <property name="sizeHint" stdset="0">
            <size>
-            <width>40</width>
+            <width>150</width>
             <height>20</height>
            </size>
           </property>
@@ -193,6 +290,22 @@
        </layout>
       </item>
      </layout>
+    </item>
+    <item>
+     <spacer name="verticalSpacer_6">
+      <property name="orientation">
+       <enum>Qt::Vertical</enum>
+      </property>
+      <property name="sizeType">
+       <enum>QSizePolicy::Preferred</enum>
+      </property>
+      <property name="sizeHint" stdset="0">
+       <size>
+        <width>20</width>
+        <height>20</height>
+       </size>
+      </property>
+     </spacer>
     </item>
     <item>
      <layout class="QHBoxLayout" name="timeline_layout">
@@ -213,7 +326,66 @@
        </spacer>
       </item>
       <item>
+       <widget class="QLabel" name="write_label">
+        <property name="minimumSize">
+         <size>
+          <width>50</width>
+          <height>0</height>
+         </size>
+        </property>
+        <property name="maximumSize">
+         <size>
+          <width>50</width>
+          <height>16777215</height>
+         </size>
+        </property>
+        <property name="styleSheet">
+         <string notr="true">color:white;
+font-size: 15px;
+font-weight: bold;</string>
+        </property>
+        <property name="text">
+         <string>Write</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <spacer name="horizontalSpacer_15">
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+        <property name="sizeType">
+         <enum>QSizePolicy::Minimum</enum>
+        </property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>5</width>
+          <height>20</height>
+         </size>
+        </property>
+       </spacer>
+      </item>
+      <item>
        <widget class="QSlider" name="write_slider">
+        <property name="styleSheet">
+         <string notr="true">QSlider::groove:horizontal#write_slider { 
+	background-color: #ededed;
+	border: 0px solid #cccccc; 
+	height: 5px; 
+	border-radius: 2px;
+}
+
+QSlider::handle:horizontal#write_slider { 
+	background-color: #e33b3b; 
+	border: 2px solid #e33b3b; 
+	width: 10px; 
+	height: 10px; 
+	line-height: 20px; 
+	margin-top: -5px; 
+	margin-bottom: -5px; 
+	border-radius: 5px; 
+}</string>
+        </property>
         <property name="orientation">
          <enum>Qt::Horizontal</enum>
         </property>
@@ -238,6 +410,22 @@
      </layout>
     </item>
     <item>
+     <spacer name="verticalSpacer_2">
+      <property name="orientation">
+       <enum>Qt::Vertical</enum>
+      </property>
+      <property name="sizeType">
+       <enum>QSizePolicy::Fixed</enum>
+      </property>
+      <property name="sizeHint" stdset="0">
+       <size>
+        <width>20</width>
+        <height>10</height>
+       </size>
+      </property>
+     </spacer>
+    </item>
+    <item>
      <layout class="QHBoxLayout" name="slider_layout">
       <item>
        <spacer name="horizontalSpacer_10">
@@ -250,6 +438,46 @@
         <property name="sizeHint" stdset="0">
          <size>
           <width>250</width>
+          <height>20</height>
+         </size>
+        </property>
+       </spacer>
+      </item>
+      <item>
+       <widget class="QLabel" name="playback_label">
+        <property name="minimumSize">
+         <size>
+          <width>50</width>
+          <height>0</height>
+         </size>
+        </property>
+        <property name="maximumSize">
+         <size>
+          <width>50</width>
+          <height>16777215</height>
+         </size>
+        </property>
+        <property name="styleSheet">
+         <string notr="true">color:white;
+font-size: 15px;
+font-weight: bold;</string>
+        </property>
+        <property name="text">
+         <string>Read</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <spacer name="horizontalSpacer_16">
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+        <property name="sizeType">
+         <enum>QSizePolicy::Minimum</enum>
+        </property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>5</width>
           <height>20</height>
          </size>
         </property>
@@ -278,6 +506,25 @@
         <property name="autoFillBackground">
          <bool>false</bool>
         </property>
+        <property name="styleSheet">
+         <string notr="true">QSlider::groove:horizontal#playback_slider { 
+	background-color: #ededed;
+	border: 0px solid #cccccc; 
+	height: 5px; 
+	border-radius: 2px;
+}
+
+QSlider::handle:horizontal#playback_slider { 
+	background-color: #5dc5f0; 
+	border: 2px solid #5dc5f0; 
+	width: 10px; 
+	height: 10px; 
+	line-height: 20px; 
+	margin-top: -5px; 
+	margin-bottom: -5px; 
+	border-radius: 5px; 
+}</string>
+        </property>
         <property name="orientation">
          <enum>Qt::Horizontal</enum>
         </property>
@@ -305,6 +552,22 @@
      </layout>
     </item>
     <item>
+     <spacer name="verticalSpacer_4">
+      <property name="orientation">
+       <enum>Qt::Vertical</enum>
+      </property>
+      <property name="sizeType">
+       <enum>QSizePolicy::Fixed</enum>
+      </property>
+      <property name="sizeHint" stdset="0">
+       <size>
+        <width>20</width>
+        <height>20</height>
+       </size>
+      </property>
+     </spacer>
+    </item>
+    <item>
      <layout class="QHBoxLayout" name="button_layout">
       <item>
        <spacer name="horizontalSpacer">
@@ -320,7 +583,7 @@
        </spacer>
       </item>
       <item>
-       <widget class="QPushButton" name="save_buffer_button">
+       <widget class="QPushButton" name="start_button">
         <property name="minimumSize">
          <size>
           <width>150</width>
@@ -328,13 +591,83 @@
          </size>
         </property>
         <property name="styleSheet">
-         <string notr="true">font-size: 20px;
+         <string notr="true">QPushButton:enabled#start_button{
+font-size: 20px;
 font-weight: bold;
-color:white;
-background-color:#2b2f30;</string>
+color:#e33b3b;
+background-color:#4b5054;
+}
+
+QPushButton:!enabled#start_button{
+font-size: 20px;
+font-weight: bold;
+color:#992828;
+background-color:#2e3233;
+}</string>
         </property>
         <property name="text">
-         <string>Save Buffer</string>
+         <string>START</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <spacer name="horizontalSpacer_17">
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+        <property name="sizeType">
+         <enum>QSizePolicy::Maximum</enum>
+        </property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>40</width>
+          <height>20</height>
+         </size>
+        </property>
+       </spacer>
+      </item>
+      <item>
+       <widget class="QPushButton" name="realtime_button">
+        <property name="enabled">
+         <bool>false</bool>
+        </property>
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Minimum" vsizetype="Expanding">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
+        <property name="minimumSize">
+         <size>
+          <width>150</width>
+          <height>50</height>
+         </size>
+        </property>
+        <property name="maximumSize">
+         <size>
+          <width>16777215</width>
+          <height>50</height>
+         </size>
+        </property>
+        <property name="styleSheet">
+         <string notr="true">QPushButton:enabled#realtime_button{
+font-size: 20px;
+font-weight: bold;
+color:#5dc5f0;
+background-color:#4b5054;
+}
+
+QPushButton:!enabled#realtime_button{
+font-size: 20px;
+font-weight: bold;
+color:#4b9cbf;
+background-color:#2e3233;
+}
+
+</string>
+        </property>
+        <property name="text">
+         <string>Real-Time</string>
         </property>
        </widget>
       </item>
@@ -355,7 +688,10 @@ background-color:#2b2f30;</string>
        </spacer>
       </item>
       <item>
-       <widget class="QPushButton" name="restart_button">
+       <widget class="QPushButton" name="playback_button">
+        <property name="enabled">
+         <bool>false</bool>
+        </property>
         <property name="sizePolicy">
          <sizepolicy hsizetype="Minimum" vsizetype="Expanding">
           <horstretch>0</horstretch>
@@ -375,13 +711,24 @@ background-color:#2b2f30;</string>
          </size>
         </property>
         <property name="styleSheet">
-         <string notr="true">font-size: 20px;
+         <string notr="true">QPushButton:enabled#playback_button{
+font-size: 20px;
 font-weight: bold;
-color: white;
-background-color:#2b2f30;</string>
+color:#5dc5f0;
+background-color:#4b5054;
+}
+
+QPushButton:!enabled#playback_button{
+font-size: 20px;
+font-weight: bold;
+color:#4b9cbf;
+background-color:#2e3233;
+}
+
+</string>
         </property>
         <property name="text">
-         <string>Restart</string>
+         <string>Playback</string>
         </property>
        </widget>
       </item>
@@ -402,12 +749,9 @@ background-color:#2b2f30;</string>
        </spacer>
       </item>
       <item>
-       <widget class="QPushButton" name="realtime_button">
-        <property name="sizePolicy">
-         <sizepolicy hsizetype="Minimum" vsizetype="Expanding">
-          <horstretch>0</horstretch>
-          <verstretch>0</verstretch>
-         </sizepolicy>
+       <widget class="QPushButton" name="save_buffer_button">
+        <property name="enabled">
+         <bool>false</bool>
         </property>
         <property name="minimumSize">
          <size>
@@ -415,22 +759,25 @@ background-color:#2b2f30;</string>
           <height>50</height>
          </size>
         </property>
-        <property name="maximumSize">
-         <size>
-          <width>16777215</width>
-          <height>50</height>
-         </size>
-        </property>
         <property name="styleSheet">
-         <string notr="true">font-size: 20px;
+         <string notr="true">QPushButton:enabled#save_buffer_button{
+font-size: 20px;
 font-weight: bold;
-color:white;
-background-color:#2b2f30;
+color:#5dc5f0;
+background-color:#4b5054;
+}
+
+QPushButton:!enabled#save_buffer_button{
+font-size: 20px;
+font-weight: bold;
+color:#4b9cbf;
+background-color:#2e3233;
+}
 
 </string>
         </property>
         <property name="text">
-         <string>Real-Time</string>
+         <string>Save Buffer</string>
         </property>
        </widget>
       </item>
@@ -449,9 +796,25 @@ background-color:#2b2f30;
       </item>
      </layout>
     </item>
+    <item>
+     <spacer name="verticalSpacer_3">
+      <property name="orientation">
+       <enum>Qt::Vertical</enum>
+      </property>
+      <property name="sizeType">
+       <enum>QSizePolicy::Fixed</enum>
+      </property>
+      <property name="sizeHint" stdset="0">
+       <size>
+        <width>20</width>
+        <height>20</height>
+       </size>
+      </property>
+     </spacer>
+    </item>
    </layout>
   </widget>
-  <widget class="QMenuBar" name="menubar">
+  <widget class="QMenuBar" name="menuBar">
    <property name="geometry">
     <rect>
      <x>0</x>
@@ -460,7 +823,24 @@ background-color:#2b2f30;
      <height>21</height>
     </rect>
    </property>
+   <property name="styleSheet">
+    <string notr="true">background-color:#a2aab0;
+color:black;
+font-weight: bold</string>
+   </property>
+   <widget class="QMenu" name="menuOptions">
+    <property name="title">
+     <string>Options</string>
+    </property>
+    <addaction name="actionSettings"/>
+   </widget>
+   <addaction name="menuOptions"/>
   </widget>
+  <action name="actionSettings">
+   <property name="text">
+    <string>Settings</string>
+   </property>
+  </action>
  </widget>
  <resources/>
  <connections/>

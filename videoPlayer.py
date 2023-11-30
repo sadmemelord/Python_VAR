@@ -1,131 +1,137 @@
-import sys
-from PySide6.QtCore import Qt, QTimer, Slot, Signal, QTimeLine, QMutex
+from PySide6.QtCore import Qt, Slot, QMutex, QFile, QCoreApplication, QTimer
+from PySide6.QtUiTools import QUiLoader
 from PySide6.QtGui import QImage, QPixmap
-from PySide6.QtWidgets import QApplication, QMainWindow, QLabel, QVBoxLayout, QPushButton, QWidget, QProgressBar, QSlider
-import cv2
+from PySide6.QtWidgets import QMainWindow
 import numpy as np
 
 from CircularBuffer import CircularBuffer
 from WorkerThread import WorkerThread
-from TimelineWidget import TimelineWidget
+
+# Set required attributes before creating QGuiApplication
+QCoreApplication.setAttribute(Qt.AA_ShareOpenGLContexts)
 
 class VideoPlayer(QMainWindow):
     def __init__(self):
         super().__init__()
+
+        #Loading the Main Window and its components from the .ui file
+        ui_file_path = QFile("VAR_System_ui\MainWindow.ui")
+        loader = QUiLoader()
+        self.main_window = loader.load(ui_file_path)
+
         # Member variables
         self.buffer_size = 500
         self.circular_buffer = CircularBuffer(self.buffer_size)
         self.worker_thread = WorkerThread(buffer=self.circular_buffer, 
                                           capture_index=0, 
-                                          parent=self)
-        
+                                          parent=self.main_window)
 
         # Mutex for thread sync
         self.mutex = QMutex()
 
-        self.init_ui()
+        # Function used to connect signals and start threads
+        self.prepare_application()
 
-    def init_ui(self):
-        self.setWindowTitle("")
-        self.central_widget = QWidget(self)
-        self.setCentralWidget(self.central_widget)
 
-        self.video_label = QLabel(self)
-        self.head_slider = QSlider(orientation=Qt.Orientation.Horizontal)
-        self.head_slider.setTracking(True)
-        self.head_slider.setRange(0, self.buffer_size)
-        self.head_slider.setSingleStep(1)
-        self.tail_slider = QSlider(orientation=Qt.Orientation.Horizontal)
-        self.tail_slider.setRange(0, self.buffer_size)
-        self.tail_slider.setSingleStep(1)
-        self.playback_button = QPushButton('Play from Beginning', self)
-        self.resume_button = QPushButton('Play in Real-Time', self)
+    def prepare_application(self):
+        '''Setting UI parameters. Connecting signals and slots. Showing the MainWindow.
+        '''
 
-        self.timeline_widget = TimelineWidget(self.buffer_size)
-
-        layout = QVBoxLayout(self.central_widget)
-        layout.addWidget(self.video_label)
-        layout.addWidget(self.timeline_widget)
-        layout.addWidget(self.head_slider)
-        layout.addWidget(self.tail_slider)
-        layout.addWidget(self.playback_button)
-        layout.addWidget(self.resume_button)
-
-        self.playback_button.clicked.connect(self.start_playback)
-        self.resume_button.clicked.connect(self.resume_realtime)
+        self.main_window.playback_slider.setRange(0, self.buffer_size)
+        self.main_window.write_slider.setRange(0, self.buffer_size)
 
         self.worker_thread.display_frame.connect(self.update_frame)
-        self.worker_thread.head_position_updated.connect(self.update_head_slider)
-        self.worker_thread.tail_position_updated.connect(self.update_tail_slider)
-        self.worker_thread.head_position_updated.connect(self.update_timeline_head)
-        self.worker_thread.tail_position_updated.connect(self.update_timeline_tail)
+        self.main_window.start_button.clicked.connect(self.start)
+        self.main_window.realtime_button.clicked.connect(self.resume_realtime)
+        self.main_window.playback_button.clicked.connect(self.restart_playback)
+        self.main_window.save_buffer_button.clicked.connect(self.save_video_buffer)
+        
+        self.worker_thread.tail_position_updated.connect(self.update_playback_cursor_position)
+        self.worker_thread.head_position_updated.connect(self.update_write_cursor_position)
+        self.main_window.playback_slider.sliderPressed.connect(self.playback_cursor_pressed)
+        self.main_window.playback_slider.sliderMoved.connect(self.playback_cursor_dragged)
+        self.main_window.playback_slider.sliderReleased.connect(self.playback_cursor_released)
 
-        self.timeline_widget.cursor_positions_changed.connect(self.update_timeline_head)
-        self.tail_slider.sliderPressed.connect(self.slider_is_pressed)
-        self.tail_slider.sliderMoved.connect(self.slider_is_moved)
-        self.tail_slider.sliderReleased.connect(self.slider_is_released)
-        self.worker_thread.start()
-
+        self.main_window.actionSettings.triggered.connect(print("OPENING SETTINGS DIALOG"))
+                
+        self.setWindowTitle("VAR System Test")
+        self.setCentralWidget(self.main_window)
         self.show()
     
-    def update_timeline_head(self, position):
-        tail_position = self.circular_buffer.tail_position()
-        self.timeline_widget.set_cursor_positions(position, tail_position)
-
-    def update_timeline_tail(self, position):
-        head_position = self.circular_buffer.head_position()
-        self.timeline_widget.set_cursor_positions(head_position, position)
-
-        # Additionally, update the tail slider
-        self.timeline_widget.cursor_positions_changed.emit(head_position, position)
-
-    @Slot(bool)
-    def slider_is_pressed(self):
+    def restart_playback(self):
+        '''Set the tail position to the beginning of the buffer'''
         self.mutex.lock()
-        self.worker_thread.tail_position_updated.disconnect(self.update_tail_slider)
+        self.worker_thread.set_buffer_playback(True)
+        self.mutex.unlock()
+    
+    def start(self):
+        self.main_window.realtime_button.setEnabled(True)
+        self.main_window.playback_button.setEnabled(True)
+        self.main_window.save_buffer_button.setEnabled(True)
+        self.main_window.start_button.setEnabled(False)
+        self.worker_thread.start()
+        
+    @Slot(bool)
+    def playback_cursor_pressed(self):
+        '''When the playback cursor is pressed the thread stops updating the cursor position'''
+        self.mutex.lock()
+        self.worker_thread.tail_position_updated.disconnect(self.update_playback_cursor_position)
         self.mutex.unlock()
 
     @Slot(int)
-    def slider_is_moved(self, slider_value):
+    def playback_cursor_dragged(self, slider_value: int):
+        '''When the playback cursor is dragged the thread starts peeking at the buffer in the selected position
+
+            Arguments:
+            -slider_value (int): The slider value is passed through a signal and determines the index to peek at
+        '''
         self.mutex.lock()
         self.worker_thread.set_buffer_peeking(is_peeking=True, new_peek_position=slider_value)
         self.mutex.unlock()
 
     @Slot(int)
-    def slider_is_released(self):
+    def playback_cursor_released(self):
+        '''When the playback cursor is released the thread stops peeking at the buffer and resumes playback from the selected position'''
         self.mutex.lock()
         self.worker_thread.set_buffer_peeking(is_peeking=False, new_peek_position=None)
-        self.circular_buffer.set_tail_position(self.tail_slider.value())
-        self.worker_thread.tail_position_updated.connect(self.update_tail_slider)
-        self.mutex.unlock()
-    
-    @Slot(int)
-    def update_tail_slider(self, position):
-        self.tail_slider.setValue(position)
-
-    @Slot(int)
-    def update_head_slider(self, position):
-        # Update progress bar based on head position           
-        self.head_slider.setValue(position)
-
-    def start_playback(self):
-        self.mutex.lock()
-        position = 0  # Set the playback position to the beginning
-        try:
-            self.circular_buffer.set_tail_position(position)
-        except ValueError as e:
-            print(f"Error setting playback position: {e}")
+        self.circular_buffer.set_tail_position(self.main_window.playback_slider.value())
+        self.worker_thread.tail_position_updated.connect(self.update_playback_cursor_position)
         self.mutex.unlock()
 
     def resume_realtime(self):
+        '''Set the tail position to the head position to resume the real-time playback'''
         self.mutex.lock()
-        self.circular_buffer.set_tail_position(self.circular_buffer.head_position())
+        self.worker_thread.set_buffer_playback(False)
         self.mutex.unlock()
+    
+    @Slot(int)
+    def update_playback_cursor_position(self, position:int):
+        '''The playback cursor is connected to the tail pointer of the buffer. Its position is updated
+            through a signal emitted by the WorkerThread.'''
+        self.main_window.playback_slider.setValue(position)
+    
+    @Slot(int)
+    def update_write_cursor_position(self, position:int):
+        self.main_window.write_slider.setValue(position)
+    
+    def save_video_buffer(self):
+        self.main_window.save_buffer_button.setEnabled(False)
+        #QTimer.singleShot(3000, lambda: self.main_window.save_buffer_button.setEnabled(True))
+        self.worker_thread.save_video_buffer()
+        
 
-    def update_frame(self, display_frame):
+    def update_frame(self, display_frame: np.ndarray):
+        ''' The frame emitted by the WorkerThread is shown on the corresponding QLabel as a QImage.
+
+            Arguments:
+            -display_frame (np.ndarray): The frame emitted by the thread
+        '''
         height, width, channel = display_frame.shape
         bytes_per_line = 3 * width
         q_image = QImage(display_frame.data, width, height, bytes_per_line, QImage.Format_BGR888)
+        q_image = q_image.scaled(self.main_window.video_label_1.width(),self.main_window.video_label_1.height(), 
+                                 Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation )
 
         pixmap = QPixmap.fromImage(q_image)
-        self.video_label.setPixmap(pixmap)
+        self.main_window.video_label_1.setPixmap(pixmap)
+
