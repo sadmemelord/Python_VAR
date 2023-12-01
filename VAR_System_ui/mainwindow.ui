@@ -367,6 +367,9 @@ font-weight: bold;</string>
       </item>
       <item>
        <widget class="QSlider" name="write_slider">
+        <property name="enabled">
+         <bool>false</bool>
+        </property>
         <property name="styleSheet">
          <string notr="true">QSlider::groove:horizontal#write_slider { 
 	background-color: #ededed;
@@ -485,6 +488,9 @@ font-weight: bold;</string>
       </item>
       <item>
        <widget class="QSlider" name="playback_slider">
+        <property name="enabled">
+         <bool>false</bool>
+        </property>
         <property name="sizePolicy">
          <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
           <horstretch>0</horstretch>
