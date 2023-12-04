@@ -1,7 +1,7 @@
-from PySide6.QtCore import Qt, Slot, QMutex, QFile, QCoreApplication, QThreadPool, QRunnable
+from PySide6.QtCore import Qt, Slot, QMutex, QMutexLocker, QFile, QCoreApplication, QThreadPool, QTimer
 from PySide6.QtUiTools import QUiLoader
 from PySide6.QtGui import QImage, QPixmap
-from PySide6.QtWidgets import QMainWindow
+from PySide6.QtWidgets import QMainWindow, QLabel
 import numpy as np
 import cv2
 
@@ -13,16 +13,6 @@ from DialogSettings import DialogSettings
 
 # Set required attributes before creating QGuiApplication
 QCoreApplication.setAttribute(Qt.AA_ShareOpenGLContexts)
-
-
-class ThreadRunnable(QRunnable):
-    def __init__(self, thread):
-        super().__init__()
-        self.thread = thread
-
-    def run(self):
-        self.thread.start()
-        self.thread.wait()
 
 class VideoPlayer(QMainWindow):
     def __init__(self):
@@ -41,11 +31,12 @@ class VideoPlayer(QMainWindow):
         self.number_of_threads = 2
         self.capture_threads = []
         self.renderer_threads = []
+        self.writer_threads = []
         self.dialog_settings = None
-
-
-        # Mutex for thread sync
-        self.mutex = QMutex()
+        
+        # Timer used to sync capture threads
+        self.timer = QTimer(self)
+        self.timer.timeout.connect(self.update_threads)
 
         # Function used to connect signals and start threads
         self.prepare_application()
@@ -63,35 +54,42 @@ class VideoPlayer(QMainWindow):
         self.main_window.playback_slider.sliderMoved.connect(self.playback_cursor_dragged)
         self.main_window.playback_slider.sliderReleased.connect(self.playback_cursor_released)
         self.main_window.actionSettings.triggered.connect(self.open_dialog_settings)
-                
+
+        for thread_index in range(self.number_of_threads):
+            # Capture Thread
+            c_thread = VideoCaptureThread(buffer_size=self.buffer_size, 
+                                                           capture_index=thread_index,
+                                                           parent=self)
+            
+            # Renderer thread
+            label_string = "video_label_" + str(thread_index + 1)
+            video_label = self.main_window.findChild(QLabel, label_string)
+            r_thread = VideoRendererThread(video_label)
+
+            # Connecting signals
+            c_thread.tail_position_updated.connect(self.update_playback_cursor_position)
+            c_thread.head_position_updated.connect(self.update_write_cursor_position, Qt.DirectConnection)
+            c_thread.display_frame.connect(r_thread.video_label_update)
+
+            # Adding threads to their respective list
+            self.capture_threads.append(c_thread)
+            self.renderer_threads.append(r_thread)
+        
         self.setWindowTitle("VAR System Test")
         self.setCentralWidget(self.main_window)
         self.show()
     
+    @Slot()
     def restart_playback(self):
         '''Set the tail position to the beginning of the buffer'''
         for thread in self.capture_threads:
             thread.set_buffer_playback(True)
 
+    @Slot()
     def start(self):
-        
-        thread_pool = QThreadPool.globalInstance()
-        thread_pool.setMaxThreadCount(self.number_of_threads)
-
-        for thread_index in range(self.number_of_threads):
-            self.capture_threads.append(VideoCaptureThread(buffer_size=self.buffer_size, 
-                                                           capture_index=thread_index,
-                                                           parent=self))
-
-
-        self.renderer_threads.append(VideoRendererThread(self.main_window.video_label_1))
-        self.renderer_threads.append(VideoRendererThread(self.main_window.video_label_2))
-        
-
+    
         self.main_window.playback_slider.setRange(0, self.buffer_size)
         self.main_window.write_slider.setRange(0, self.buffer_size)
-
-        
         self.main_window.realtime_button.setEnabled(True)
         self.main_window.playback_button.setEnabled(True)
         self.main_window.save_buffer_button.setEnabled(True)
@@ -99,27 +97,35 @@ class VideoPlayer(QMainWindow):
         self.main_window.playback_slider.setEnabled(True)
         self.main_window.write_slider.setEnabled(True)
 
-        self.capture_threads[0].tail_position_updated.connect(self.update_playback_cursor_position)
-        self.capture_threads[0].head_position_updated.connect(self.update_write_cursor_position)
+        self.timer.start(self.capture_threads[0].frame_interval)
 
-        self.capture_threads[0].display_frame.connect(self.renderer_threads[0].video_label_update)
-        self.capture_threads[1].display_frame.connect(self.renderer_threads[1].video_label_update)
-
-        self.renderer_threads[0].start()
-        self.renderer_threads[1].start()
+        for c_thread, r_thread in zip(self.capture_threads, self.renderer_threads):
+            c_thread.start()
+            r_thread.start()
+    @Slot()
+    def update_threads(self):
         for thread in self.capture_threads:
-            thread.start()
-            print(f"Thread: {thread} STARTED")
+            thread.synchronize_threads()
 
+    @Slot(int)
+    def update_playback_cursor_position(self, position:int):
+        '''The playback cursor is connected to the tail pointer of the buffer. Its position is updated
+            through a signal emitted by the WorkerThread.'''
+        #print(f"Buffer TAIL position {position}")
+        self.main_window.playback_slider.setValue(position)
+
+    @Slot(int)
+    def update_write_cursor_position(self, position:int):
+        
+        #print(f"Buffer HEAD position {position}")
+        self.main_window.write_slider.setValue(position)
 
 
     @Slot(bool)
     def playback_cursor_pressed(self):
         '''When the playback cursor is pressed the thread stops updating the cursor position'''
-        self.mutex.lock()
-        #for thread in self.capture_threads:
-        self.capture_threads[0].tail_position_updated.disconnect(self.update_playback_cursor_position)
-        self.mutex.unlock()
+        for thread in self.capture_threads:
+            thread.tail_position_updated.disconnect(self.update_playback_cursor_position)
 
     @Slot(int)
     def playback_cursor_dragged(self, slider_value: int):
@@ -131,21 +137,21 @@ class VideoPlayer(QMainWindow):
         for thread in self.capture_threads:
             thread.set_buffer_peeking(is_peeking=True, new_peek_position=slider_value)
 
-
     @Slot(int)
     def playback_cursor_released(self):
         '''When the playback cursor is released the thread stops peeking at the buffer and resumes playback from the selected position'''
         new_peek_position = self.main_window.playback_slider.value()
         for thread in self.capture_threads:
             thread.set_buffer_peeking(is_peeking=False, new_peek_position=new_peek_position)
-        self.capture_threads[0].tail_position_updated.connect(self.update_playback_cursor_position)
+            thread.tail_position_updated.connect(self.update_playback_cursor_position)
 
-
+    @Slot()
     def resume_realtime(self):
         '''Set the tail position to the head position to resume the real-time playback'''
         for thread in self.capture_threads:
             thread.set_buffer_playback(False)
-    
+
+    @Slot()
     def open_dialog_settings(self):
         if not self.dialog_settings:
             self.dialog_settings = DialogSettings()
@@ -154,56 +160,33 @@ class VideoPlayer(QMainWindow):
         else:
             self.dialog_settings.show()
 
-    @Slot(int)
-    def update_playback_cursor_position(self, position:int):
-        '''The playback cursor is connected to the tail pointer of the buffer. Its position is updated
-            through a signal emitted by the WorkerThread.'''
-        self.main_window.playback_slider.setValue(position)
-    
-    @Slot(int)
-    def update_write_cursor_position(self, position:int):
-        self.main_window.write_slider.setValue(position)
-    
+    @Slot()
     def save_video_buffer(self):
         self.main_window.save_buffer_button.setEnabled(False)
-    
-        capture_data = self.capture_threads[0].get_capture_data()
-        filename = "clip_" + str(self.clip_index) + ".avi"
-        self.clip_index += 1
 
-        self.video_writer_thread = VideoWriterThread(
-            buffer = capture_data[0],
-            width = int(capture_data[1]),
-            height = int(capture_data[2]),
-            fps = capture_data[3],
-            filename = filename,
-            fourcc = cv2.VideoWriter_fourcc(*self.encoding),
-            parent = self
-        )
+        for index, thread in enumerate(self.capture_threads):
+            capture_data = thread.get_capture_data()
+            filename = "capture_" + str(index) + "_clip_" + str(self.clip_index) + ".avi"
+            self.clip_index += 1
 
-        self.video_writer_thread.finished.connect(lambda: self.main_window.save_buffer_button.setEnabled(True))
-        self.video_writer_thread.start()
+            w_thread = VideoWriterThread(buffer = capture_data[0],
+                                        width = int(capture_data[1]),
+                                        height = int(capture_data[2]),
+                                        fps = capture_data[3],
+                                        filename = filename,
+                                        fourcc = cv2.VideoWriter_fourcc(*self.encoding),
+                                        parent = self)
+            
+            self.writer_threads.append(w_thread)
+
+        for thread in self.writer_threads:
+            thread.start()
+        
+        #self.video_writer_thread.finished.connect(lambda: self.main_window.save_buffer_button.setEnabled(True))
+        self.main_window.save_buffer_button.setEnabled(True)
         
     @Slot(int, int, str)
     def update_settings(self, number_of_cameras, buffer_size, encoding):
         self.buffer_size = buffer_size
         self.number_of_threads = number_of_cameras
         self.encoding = encoding
-
-    def update_frame(self, display_frame: np.ndarray):
-        ''' The frame emitted by the WorkerThread is shown on the corresponding QLabel as a QImage.
-
-            Arguments:
-            -display_frame (np.ndarray): The frame emitted by the thread
-        '''
-        thread = self.sender()
-        thread_index = self.capture_threads.index(thread)
-
-        height, width, channel = display_frame.shape
-        bytes_per_line = 3 * width
-        q_image = QImage(display_frame.data, width, height, bytes_per_line, QImage.Format_BGR888)
-        q_image = q_image.scaled(self.main_window.video_label_1.width(),self.main_window.video_label_1.height(), 
-                                 Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation )
-
-        pixmap = QPixmap.fromImage(q_image)
-        self.main_window.video_label_1.setPixmap(pixmap)

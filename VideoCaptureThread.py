@@ -1,4 +1,4 @@
-from PySide6.QtCore import QThread, QMutex, Signal
+from PySide6.QtCore import QThread, QMutex, QMutexLocker, Signal, QWaitCondition, QElapsedTimer
 import cv2
 import numpy as np
 import threading
@@ -33,6 +33,8 @@ class VideoCaptureThread(QThread):
 
         # Mutex for thread safety
         self.mutex = QMutex()
+        # QWaitCondition for synchronization
+        self.sync_condition = QWaitCondition()
 
         if not(capture_index, int) or capture_index is None:
             raise TypeError("Argument 'capture_index' is None or is not of int type")
@@ -43,7 +45,8 @@ class VideoCaptureThread(QThread):
                 self.height = self.video_capture.set(cv2.CAP_PROP_FRAME_HEIGHT, 1080)
                 self.width = self.video_capture.get(cv2.CAP_PROP_FRAME_WIDTH)
                 self.height = self.video_capture.get(cv2.CAP_PROP_FRAME_HEIGHT)
-                self.fps = 25
+                self.fps = self.video_capture.get(cv2.CAP_PROP_FPS)
+                self.frame_interval = (1 / self.fps) * 1000
                 print("\n---------")
                 print("Video Capture Thread CREATED")
                 print(f"Capture Index: {capture_index} | Buffer Size: {buffer_size} | Width: {self.width} | Height: {self.height} | FPS: {self.fps}")
@@ -60,46 +63,43 @@ class VideoCaptureThread(QThread):
             raise Exception("ERROR: Couldn't open VideoCapture")
 
         while not self.is_stopped:
-            starting_time = time.time() * 1000
-            ret, frame = self.video_capture.read()
+        
+            with QMutexLocker(self.mutex):
+                self.sync_condition.wait(self.mutex)
 
-            if not ret:
-                raise Exception("ERROR: Couldn't read from VideoCapture")
-            
-            #self.mutex.lock()
+                ret, frame = self.video_capture.read()
 
-            # Writing the current frame at the head of the buffer
-            if not self.is_playback:
-                self.buffer.write_frame(frame)
+                if not ret:
+                    raise Exception("ERROR: Couldn't read from VideoCapture")
+                
+                # Writing the current frame at the head of the buffer
+                if not self.is_playback:
+                    self.buffer.write_frame(frame)
 
-            # If the user is dragging the timeline cursor the frame shown corresponds to the position on the timeline
-            # If the user isn't dragging the timeline cursor the frae shown is the one at the tail of the buffer
-            if self.is_peeking:
-                display_frame = self.buffer.peek_frame(self.peek_position)
-            else:
-                display_frame = self.buffer.read_frame(playback=self.is_playback)
+                # If the user is dragging the timeline cursor the frame shown corresponds to the position on the timeline
+                # If the user isn't dragging the timeline cursor the frae shown is the one at the tail of the buffer
+                if self.is_peeking:
+                    display_frame = self.buffer.peek_frame(self.peek_position)
+                else:
+                    display_frame = self.buffer.read_frame(playback=self.is_playback)
 
+                # Emitting signals to update the GUI
+                self.head_position_updated.emit(self.buffer.head_position())
+                self.tail_position_updated.emit(self.buffer.tail_position())
+                self.display_frame.emit(display_frame)
 
-            # Emitting signals to update the GUI
-            self.display_frame.emit(display_frame)
-            self.head_position_updated.emit(self.buffer.head_position())
-            self.tail_position_updated.emit(self.buffer.tail_position())
-            ending_time = time.time() * 1000
+    def synchronize_threads(self):
+        # Emit signal to synchronize all threads
+        with QMutexLocker(self.mutex):
+            #synch_time = time.time()
+            #print(f"Thread: {self} synch at time: {synch_time}")
+            self.sync_condition.wakeAll() 
 
-            elapsed_time = ending_time - starting_time
-
-            if elapsed_time < 40:
-                print("Sleeping for:", str(40-elapsed_time))
-                self.msleep(40-elapsed_time)
-
-            #self.mutex.unlock()
-      
     def stop(self):
-        self.mutex.lock()
-        self.is_stopped = True
+        with QMutexLocker(self.mutex):
+            self.is_stopped = True
         self.wait()
-        self.mutex.unlock()
-
+    
     def get_capture_data(self) -> tuple[list, int, int, int]:
         '''Return a tuple containing the buffer and capture data.
 
@@ -108,11 +108,10 @@ class VideoCaptureThread(QThread):
             -Frame width and height
             -Video FPS
         '''
-        self.mutex.lock()
-        buffer = self.buffer.get_buffer()
-        self.mutex.unlock()
-
-        capture_parameters = [buffer, self.width, self.height, self.fps]
+        with QMutexLocker(self.mutex):
+            buffer = self.buffer.get_buffer()
+            capture_parameters = [buffer, self.width, self.height, self.fps]
+            
         return capture_parameters
 
     def set_buffer_peeking(self, is_peeking: bool, new_peek_position: int = None):
@@ -122,11 +121,12 @@ class VideoCaptureThread(QThread):
             -is_peeking (bool): Flag that enables or disables the thread peeking through the buffer.
             -new_peek_position (int): Buffer index where the thread will peek at the next frame.
         '''
-        self.is_peeking = is_peeking
-        self.peek_position = new_peek_position
+        with QMutexLocker(self.mutex):
+            self.is_peeking = is_peeking
+            self.peek_position = new_peek_position
 
-        if not is_peeking:
-            self.buffer.set_tail_position(new_peek_position)
+            if not is_peeking:
+                self.buffer.set_tail_position(new_peek_position)
 
     def set_buffer_playback(self, is_playback:bool):
         '''When the playback is selected the head pointer in the buffer stops and no new frame are written. The playback is done with the tail
@@ -135,8 +135,9 @@ class VideoCaptureThread(QThread):
             Arguments:
             -is_playback(bool): Flag that enables or disables the buffer playback.
         '''
-        self.is_playback = is_playback
-        if is_playback:
-            self.buffer.set_tail_position(position=0)
-        else:
-            self.buffer.set_tail_to_head()
+        with QMutexLocker(self.mutex):
+            self.is_playback = is_playback
+            if is_playback:
+                self.buffer.set_tail_position(position=0)
+            else:
+                self.buffer.set_tail_to_head()

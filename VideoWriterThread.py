@@ -14,11 +14,12 @@ class VideoWriterThread(QThread):
         self.height = height
 
     def run(self):
-        print("WRITING")
         writer = cv2.VideoWriter(self.filename, self.fourcc, self.fps, (self.width, self.height))
-
-        for frame in self.buffer:
-            writer.write(frame)
+        try:
+            for frame in self.buffer:
+                writer.write(frame)
+        except:
+            cv2.Error("Couldn't write file to disk")
 
         writer.release()
 
