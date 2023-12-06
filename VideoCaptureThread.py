@@ -40,11 +40,12 @@ class VideoCaptureThread(QThread):
             raise TypeError("Argument 'capture_index' is None or is not of int type")
         else:
             try:
-                self.video_capture = cv2.VideoCapture(capture_index)
-                self.width = self.video_capture.set(cv2.CAP_PROP_FRAME_WIDTH, 1920)
-                self.height = self.video_capture.set(cv2.CAP_PROP_FRAME_HEIGHT, 1080)
+                self.video_capture = cv2.VideoCapture(capture_index, cv2.CAP_MSMF)                
+                self.video_capture.set(cv2.CAP_PROP_FRAME_WIDTH, 1920)
+                self.video_capture.set(cv2.CAP_PROP_FRAME_HEIGHT, 1080)
                 self.width = self.video_capture.get(cv2.CAP_PROP_FRAME_WIDTH)
                 self.height = self.video_capture.get(cv2.CAP_PROP_FRAME_HEIGHT)
+                #self.video_capture.set(cv2.CAP_PROP_FPS, 25 )
                 self.fps = self.video_capture.get(cv2.CAP_PROP_FPS)
                 self.frame_interval = (1 / self.fps) * 1000
                 print("\n---------")
@@ -52,7 +53,7 @@ class VideoCaptureThread(QThread):
                 print(f"Capture Index: {capture_index} | Buffer Size: {buffer_size} | Width: {self.width} | Height: {self.height} | FPS: {self.fps}")
                 print("---------\n")
             except:
-                raise SystemError("Argument 'capture_index' is not a valid index for cv2.VideoCapture object")
+                raise SystemError(f"Argument 'capture_index' = {capture_index} is not a valid index for cv2.VideoCapture object")
 
 
     def run(self):
@@ -91,8 +92,8 @@ class VideoCaptureThread(QThread):
     def synchronize_threads(self):
         # Emit signal to synchronize all threads
         with QMutexLocker(self.mutex):
-            #synch_time = time.time()
-            #print(f"Thread: {self} synch at time: {synch_time}")
+            synch_time = time.time()
+            print(f"Thread: {self} synch at time: {synch_time}")
             self.sync_condition.wakeAll() 
 
     def stop(self):

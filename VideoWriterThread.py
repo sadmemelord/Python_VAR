@@ -22,6 +22,4 @@ class VideoWriterThread(QThread):
             cv2.Error("Couldn't write file to disk")
 
         writer.release()
-
         self.finished.emit()
-

@@ -4,6 +4,7 @@ from PySide6.QtGui import QImage, QPixmap
 from PySide6.QtWidgets import QMainWindow, QLabel
 import numpy as np
 import cv2
+import os
 
 from VideoCaptureThread import VideoCaptureThread
 from VideoWriterThread import VideoWriterThread
@@ -33,6 +34,12 @@ class VideoPlayer(QMainWindow):
         self.renderer_threads = []
         self.writer_threads = []
         self.dialog_settings = None
+        self.output_path = "output\\"
+        if not os.path.exists(self.output_path):
+            try:
+                os.makedirs(self.output_path)
+            except OSError as err:
+                print(f"Error creating folder {self.output_path} : {err}")
         
         # Timer used to sync capture threads
         self.timer = QTimer(self)
@@ -54,26 +61,6 @@ class VideoPlayer(QMainWindow):
         self.main_window.playback_slider.sliderMoved.connect(self.playback_cursor_dragged)
         self.main_window.playback_slider.sliderReleased.connect(self.playback_cursor_released)
         self.main_window.actionSettings.triggered.connect(self.open_dialog_settings)
-
-        for thread_index in range(self.number_of_threads):
-            # Capture Thread
-            c_thread = VideoCaptureThread(buffer_size=self.buffer_size, 
-                                                           capture_index=thread_index,
-                                                           parent=self)
-            
-            # Renderer thread
-            label_string = "video_label_" + str(thread_index + 1)
-            video_label = self.main_window.findChild(QLabel, label_string)
-            r_thread = VideoRendererThread(video_label)
-
-            # Connecting signals
-            c_thread.tail_position_updated.connect(self.update_playback_cursor_position)
-            c_thread.head_position_updated.connect(self.update_write_cursor_position, Qt.DirectConnection)
-            c_thread.display_frame.connect(r_thread.video_label_update)
-
-            # Adding threads to their respective list
-            self.capture_threads.append(c_thread)
-            self.renderer_threads.append(r_thread)
         
         self.setWindowTitle("VAR System Test")
         self.setCentralWidget(self.main_window)
@@ -87,9 +74,29 @@ class VideoPlayer(QMainWindow):
 
     @Slot()
     def start(self):
+        for thread_index in range(self.number_of_threads):
+            # Capture Thread
+            c_thread = VideoCaptureThread(buffer_size=self.buffer_size, 
+                                                            capture_index=thread_index,
+                                                            parent=self)
+            
+            # Renderer thread
+            label_string = "video_label_" + str(thread_index + 1)
+            video_label = self.main_window.findChild(QLabel, label_string)
+            r_thread = VideoRendererThread(video_label)
+
+            # Connecting signals
+            c_thread.tail_position_updated.connect(self.update_playback_cursor_position)
+            c_thread.head_position_updated.connect(self.update_write_cursor_position)
+            c_thread.display_frame.connect(r_thread.video_label_update)
+
+            # Adding threads to their respective list
+            self.capture_threads.append(c_thread)
+            self.renderer_threads.append(r_thread)
     
         self.main_window.playback_slider.setRange(0, self.buffer_size)
         self.main_window.write_slider.setRange(0, self.buffer_size)
+        self.main_window.menuOptions.setEnabled(False)
         self.main_window.realtime_button.setEnabled(True)
         self.main_window.playback_button.setEnabled(True)
         self.main_window.save_buffer_button.setEnabled(True)
@@ -116,7 +123,6 @@ class VideoPlayer(QMainWindow):
 
     @Slot(int)
     def update_write_cursor_position(self, position:int):
-        
         #print(f"Buffer HEAD position {position}")
         self.main_window.write_slider.setValue(position)
 
@@ -166,7 +172,7 @@ class VideoPlayer(QMainWindow):
 
         for index, thread in enumerate(self.capture_threads):
             capture_data = thread.get_capture_data()
-            filename = "capture_" + str(index) + "_clip_" + str(self.clip_index) + ".avi"
+            filename = self.output_path + "capture_" + str(index) + "_clip_" + str(self.clip_index) + ".avi"
             self.clip_index += 1
 
             w_thread = VideoWriterThread(buffer = capture_data[0],
@@ -181,12 +187,12 @@ class VideoPlayer(QMainWindow):
 
         for thread in self.writer_threads:
             thread.start()
-        
-        #self.video_writer_thread.finished.connect(lambda: self.main_window.save_buffer_button.setEnabled(True))
+            
         self.main_window.save_buffer_button.setEnabled(True)
         
-    @Slot(int, int, str)
-    def update_settings(self, number_of_cameras, buffer_size, encoding):
+    @Slot(int, int, str, str)
+    def update_settings(self, number_of_cameras, buffer_size, encoding, output_path):
         self.buffer_size = buffer_size
         self.number_of_threads = number_of_cameras
         self.encoding = encoding
+        self.output_path = output_path
